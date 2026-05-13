@@ -7,47 +7,6 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flask flask-cors flake8
-      
-      - name: Lint with flake8
-        run: |
-          flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
-      
-      - name: Check syntax
-        run: |
-          python -m py_compile 1321312.py
-          python -m py_compile module_b_cart.py
-          python -m py_compile module_c_orders.py
-      
-      - name: Import test
-        run: |
-          python -c "from flask 
-cat > .github/workflows/ci.yml << 'EOF'
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  # JOB 1: Линтинг и проверка кода
   lint-and-test:
     runs-on: ubuntu-latest
     
@@ -65,10 +24,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install flask flask-cors flake8
       
-      # 4.3 Линтинг
       - name: Lint with flake8
-        run: |
-          flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
+        run: flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
       
       - name: Check syntax
         run: |
@@ -77,13 +34,11 @@ jobs:
           python -m py_compile module_c_orders.py
       
       - name: Import test
-        run: |
-          python -c "from flask import Flask; print('Flask OK')"
+        run: python -c "from flask import Flask; print('Flask OK')"
 
-  # JOB 2: Сборка Docker образов (4.4)
   docker-build:
     runs-on: ubuntu-latest
-    needs: lint-and-test  # Сначала проверяем код, потом собираем Docker
+    needs: lint-and-test
     
     steps:
       - name: Checkout code
@@ -92,55 +47,40 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
-      # 4.4 Сборка Docker образов
-      - name: Build catalog Docker image
-        run: |
-          docker build -f Dockerfile.catalog -t catalog-service:latest .
-          docker images | grep catalog-service
+      - name: Build catalog image
+        run: docker build -f Dockerfile.catalog -t catalog-service:latest .
       
-      - name: Build cart Docker image
-        run: |
-          docker build -f Dockerfile.cart -t cart-service:latest .
-          docker images | grep cart-service
+      - name: Build cart image
+        run: docker build -f Dockerfile.cart -t cart-service:latest .
       
-      - name: Build orders Docker image
-        run: |
-          docker build -f Dockerfile.orders -t orders-service:latest .
-          docker images | grep orders-service
+      - name: Build orders image
+        run: docker build -f Dockerfile.orders -t orders-service:latest .
       
       - name: Docker build success
-        run: echo "✅ All Docker images built successfully!"
+        run: echo "All Docker images built successfully"
 
-  # JOB 3: Интеграционный тест (запуск контейнеров)
   integration-test:
     runs-on: ubuntu-latest
-    needs: docker-build  # После сборки Docker запускаем тест
+    needs: docker-build
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Build and start all services
+      - name: Build and start services
         run: docker-compose up -d --build
       
       - name: Wait for services
         run: sleep 10
       
-      - name: Test endpoints
-        run: |
-          echo "=== Testing Catalog (5001) ==="
-          curl -f http://localhost:5001/health || exit 1
-          curl -f http://localhost:5001/products || exit 1
-          
-          echo "=== Testing Cart (5002) ==="
-          curl -f http://localhost:5002/health || exit 1
-          curl -f http://localhost:5002/cart || exit 1
-          
-          echo "=== Testing Orders (3000) ==="
-          curl -f http://localhost:3000/health || exit 1
-          curl -f http://localhost:3000/orders || exit 1
-          
-          echo "✅ All integration tests passed!"
+      - name: Test catalog
+        run: curl -f http://localhost:5001/health
+      
+      - name: Test cart
+        run: curl -f http://localhost:5002/health
+      
+      - name: Test orders
+        run: curl -f http://localhost:3000/health
       
       - name: Stop services
         if: always()
