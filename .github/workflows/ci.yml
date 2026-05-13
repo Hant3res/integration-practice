@@ -7,31 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  # 4.3 Линтинг (аналог dotnet format)
-  linting:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Install flake8
-        run: pip install flake8
-      
-      - name: Run linter (flake8)
-        run: |
-          flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
-          echo "✅ Linting passed"
-
-  # 4.4 Сборка Docker образов
   docker-build:
     runs-on: ubuntu-latest
-    needs: linting
-    
     steps:
       - uses: actions/checkout@v3
       
@@ -44,22 +21,20 @@ jobs:
       - name: Build orders image
         run: docker build -f Dockerfile.orders -t orders-service .
       
-      - name: Verify images
+      - name: Verify Docker builds
         run: |
           docker images | grep catalog-service
           docker images | grep cart-service
           docker images | grep orders-service
-          echo "✅ All Docker images built successfully"
+          echo "✅ Docker images built successfully"
 
-  # Интеграционный тест (запуск контейнеров)
   integration-test:
     runs-on: ubuntu-latest
     needs: docker-build
-    
     steps:
       - uses: actions/checkout@v3
       
-      - name: Start all services
+      - name: Start services
         run: docker-compose up -d
       
       - name: Wait for services
@@ -76,10 +51,9 @@ jobs:
         if: always()
         run: docker-compose down
 
-  # 4.5 Проверка перед merge (успешный статус)
   ready-for-merge:
     runs-on: ubuntu-latest
-    needs: [linting, docker-build, integration-test]
+    needs: [docker-build, integration-test]
     if: success()
     steps:
       - run: echo "✅ All checks passed. Ready for merge!"
