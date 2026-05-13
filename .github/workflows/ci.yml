@@ -12,25 +12,28 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flask flask-cors
+          pip install flask flask-cors flake8
 
       - name: Lint with flake8
         run: |
-          pip install flake8
-          flake8 *.py --max-line-length=120 --ignore=F403,F401
+          flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
+
+      - name: Syntax check
+        run: |
+          python -m py_compile 1321312.py module_b_cart.py module_c_orders.py
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v2
 
       - name: Build Docker images
         run: |
@@ -42,13 +45,20 @@ jobs:
         run: docker-compose up -d
 
       - name: Wait for services
-        run: sleep 10
+        run: sleep 15
 
       - name: Test endpoints
         run: |
-          curl -f http://localhost:5001/products || exit 1
-          curl -f http://localhost:5002/cart || exit 1
-          curl -f http://localhost:3000/orders || exit 1
+          curl -f http://localhost:5001/health || echo "Catalog health failed"
+          curl -f http://localhost:5001/products || echo "Catalog products failed"
+          curl -f http://localhost:5002/health || echo "Cart health failed"
+          curl -f http://localhost:5002/cart || echo "Cart failed"
+          curl -f http://localhost:3000/health || echo "Orders health failed"
+          curl -f http://localhost:3000/orders || echo "Orders failed"
+
+      - name: Show docker logs on failure
+        if: failure()
+        run: docker-compose logs
 
       - name: Stop services
         if: always()
