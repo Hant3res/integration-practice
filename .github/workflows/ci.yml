@@ -1,11 +1,13 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,18 +19,31 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Аналог dotnet restore
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flask flask-cors flake8
+          pip install flask flask-cors flake8 black
 
-      - name: Lint with flake8
-        run: flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
-
-      - name: Install Docker Compose
+      # Аналог dotnet build (проверка синтаксиса)
+      - name: Check Python syntax
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
+          python -m py_compile 1321312.py
+          python -m py_compile module_b_cart.py
+          python -m py_compile module_c_orders.py
+
+      # Шаг 4.3 - Линтинг (аналог dotnet format)
+      - name: Lint with flake8
+        run: |
+          flake8 *.py --max-line-length=120 --ignore=F403,F401,E501
+
+      - name: Format check with black
+        run: |
+          black --check *.py || echo "Format issues found (non-blocking)"
+
+      # Шаг 4.4 - Сборка Docker образов
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Build Docker images
         run: |
@@ -36,18 +51,32 @@ jobs:
           docker build -f Dockerfile.cart -t cart-service .
           docker build -f Dockerfile.orders -t orders-service .
 
-      - name: Start services
+      # Запуск docker-compose
+      - name: Start services with docker-compose
         run: docker-compose up -d
 
+      # Ожидание запуска
       - name: Wait for services
         run: sleep 10
 
-      - name: Run tests
+      # Аналог integration tests
+      - name: Run integration tests
         run: |
-          curl -f http://localhost:5001/health && echo "✅ Catalog OK"
-          curl -f http://localhost:5002/health && echo "✅ Cart OK"
-          curl -f http://localhost:3000/health && echo "✅ Orders OK"
+          echo "=== Testing Catalog Service ==="
+          curl -f http://localhost:5001/health || exit 1
+          curl -f http://localhost:5001/products || exit 1
+          
+          echo "=== Testing Cart Service ==="
+          curl -f http://localhost:5002/health || exit 1
+          curl -f http://localhost:5002/cart || exit 1
+          
+          echo "=== Testing Orders Service ==="
+          curl -f http://localhost:3000/health || exit 1
+          curl -f http://localhost:3000/orders || exit 1
+          
+          echo "=== All integration tests passed! ==="
 
+      # Остановка сервисов
       - name: Stop services
         if: always()
         run: docker-compose down
