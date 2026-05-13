@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система доставки еды - Тестовый интерфейс</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .modules {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .card h3 {
+            color: #666;
+            margin: 15px 0 10px 0;
+            font-size: 1.1em;
+        }
+        .product-list, .order-list, .cart-items {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .product-item, .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .product-item:last-child, .cart-item:last-child {
+            border-bottom: none;
+        }
+        .product-info {
+            flex: 1;
+        }
+        .product-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .product-price {
+            color: #667eea;
+            font-size: 0.9em;
+        }
+        .product-stock {
+            font-size: 0.8em;
+            color: #4CAF50;
+        }
+        .product-stock.out {
+            color: #f44336;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: opacity 0.3s;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .cart-total {
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: right;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px solid #eee;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .order-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .order-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-pending { background: #ffc107; color: #000; }
+        .status-assigned { background: #17a2b8; color: #fff; }
+        .status-delivered { background: #28a745; color: #fff; }
+        .refresh-btn {
+            background: #6c757d;
+            margin-bottom: 10px;
+            font-size: 0.8em;
+        }
+        .clear-btn {
+            background: #dc3545;
+            margin-left: 10px;
+        }
+        .cart-id-display {
+            background: #e7f3ff;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍕 Система доставки еды</h1>
+        
+        <div class="modules">
+            <!-- Модуль А: Каталог -->
+            <div class="card">
+                <h2>📋 Модуль А: Каталог товаров</h2>
+                <div id="products-list" class="product-list">
+                    Загрузка...
+                </div>
+                <button onclick="loadProducts()" style="background:#6c757d">🔄 Обновить</button>
+            </div>
+
+            <!-- Модуль Б: Корзина -->
+            <div class="card">
+                <h2>🛒 Модуль Б: Корзина</h2>
+                <div id="cart-id-display" class="cart-id-display" style="display:none">
+                    <strong>ID корзины:</strong> <span id="cart-id-value"></span>
+                </div>
+                <div id="cart-items" class="cart-items">
+                    Корзина пуста
+                </div>
+                <div id="cart-total" class="cart-total">Итого: 0 ₽</div>
+                <button onclick="refreshCart()" class="refresh-btn">🔄 Обновить корзину</button>
+                <button onclick="clearCart()" class="clear-btn">🗑 Очистить корзину</button>
+            </div>
+
+            <!-- Модуль В: Заказы -->
+            <div class="card">
+                <h2>📦 Модуль В: Заказы</h2>
+                <h3>Оформление заказа</h3>
+                <input type="text" id="user-id" placeholder="ID пользователя" value="user123">
+                <input type="text" id="address" placeholder="Адрес доставки" value="ул. Пушкина, 10">
+                <select id="payment-method">
+                    <option value="CARD">💳 Карта</option>
+                    <option value="CASH">💵 Наличные</option>
+                    <option value="ONLINE">📱 Онлайн</option>
+                </select>
+                <button onclick="createOrder()">✅ Оформить заказ из корзины</button>
+                
+                <h3 style="margin-top:20px">Мои заказы</h3>
+                <div id="orders-list" class="product-list">
+                    Загрузка...
+                </div>
+                <button onclick="loadOrders()" class="refresh-btn">🔄 Обновить заказы</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Базовые URL модулей
+        const CATALOG_URL = 'http://localhost:5001';
+        const CART_URL = 'http://localhost:5002';
+        const ORDERS_URL = 'http://localhost:3000';
+        
+        // ID корзины (хранится в localStorage)
+        let cartId = localStorage.getItem('cart_id') || null;
+        
+        // Генерация случайного ID корзины (если нет)
+        if (!cartId) {
+            cartId = 'cart_' + Math.random().toString(36).substr(2, 16);
+            localStorage.setItem('cart_id', cartId);
+        }
+        
+        // Отображаем ID корзины
+        document.getElementById('cart-id-value').innerText = cartId;
+        document.getElementById('cart-id-display').style.display = 'block';
+        
+        // ============ Модуль А: Загрузка товаров ============
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${CATALOG_URL}/products`);
+                const products = await response.json();
+                
+                const container = document.getElementById('products-list');
+                if (products.length === 0) {
+                    container.innerHTML = '<p>Нет товаров</p>';
+                    return;
+                }
+                
+                container.innerHTML = products.map(product => `
+                    <div class="product-item">
+                        <div class="product-info">
+                            <div class="product-name">${product.name}</div>
+                            <div class="product-price">${product.price} ₽</div>
+                            <div class="product-stock ${product.inStock ? '' : 'out'}">
+                                ${product.inStock ? '✅ В наличии' : '❌ Нет в наличии'}
+                            </div>
+                        </div>
+                        <button onclick="addToCart(${product.id}, '${product.name}', ${product.price})" 
+                                ${!product.inStock ? 'disabled' : ''}>
+                            🛒 Добавить
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('products-list').innerHTML = 
+                    '<p style="color:red">❌ Ошибка загрузки товаров. Убедитесь, что модуль А запущен на порту 5001</p>';
+                console.error(error);
+            }
+        }
+        
+        // ============ Модуль Б: Добавление в корзину ============
+        async function addToCart(productId, productName, price) {
+            try {
+                const response = await fetch(`${CART_URL}/cart/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Cart-ID': cartId
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        product_name: productName,
+                        price: price,
+                        quantity: 1
+                    })
+                });
+                
+                if (response.ok) {
+                    showStatus('Товар добавлен в корзину!', 'success');
+                    refreshCart();
+                } else {
+                    showStatus('Ошибка при добавлении', 'error');
+                }
+            } catch (error) {
+                showStatus('Ошибка соединения с модулем корзины', 'error');
+                console.error(error);
+            }
+        }
+        
+        // ============ Модуль Б: Просмотр корзины ============
+        async function refreshCart() {
+            try {
+                const response = await fetch(`${CART_URL}/cart`, {
+                    headers: { 'X-Cart-ID': cartId }
+                });
+                const cart = await response.json();
+                
+                const container = document.getElementById('cart-items');
+                const totalSpan = document.getElementById('cart-total');
+                
+                if (!cart.items || cart.items.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:#999;">Корзина пуста</p>';
+                    totalSpan.innerHTML = 'Итого: 0 ₽';
+                    return;
+                }
+                
+                container.innerHTML = cart.items.map(item => `
+                    <div class="cart-item">
+                        <div class="product-info">
+                            <div class="product-name">${item.name}</div>
+                            <div class="product-price">${item.price} ₽ × ${item.quantity}</div>
+                        </div>
+                        <div style="font-weight:bold">${item.price * item.quantity} ₽</div>
+                    </div>
+                `).join('');
+                
+                totalSpan.innerHTML = `Итого: ${cart.total} ₽`;
+            } catch (error) {
+                document.getElementById('cart-items').innerHTML = 
+                    '<p style="color:red">❌ Ошибка загрузки корзины</p>';
+                console.error(error);
+            }
+        }
+        
+        // ============ Модуль Б: Очистка корзины ============
+        async function clearCart() {
+            if (!confirm('Очистить корзину?')) return;
+            
+            // Создаём новую корзину (новый ID)
+            cartId = 'cart_' + Math.random().toString(36).substr(2, 16);
+            localStorage.setItem('cart_id', cartId);
+            document.getElementById('cart-id-value').innerText = cartId;
+            
+            await refreshCart();
+            showStatus('Корзина очищена', 'success');
+        }
+        
+        // ============ Модуль В: Создание заказа ============
+        async function createOrder() {
+            // Сначала получаем текущую корзину
+            try {
+                const cartResponse = await fetch(`${CART_URL}/cart`, {
+                    headers: { 'X-Cart-ID': cartId }
+                });
+                const cart = await cartResponse.json();
+                
+                if (!cart.items || cart.items.length === 0) {
+                    showStatus('Корзина пуста! Добавьте товары', 'error');
+                    return;
+                }
+                
+                // Преобразуем товары из корзины в формат заказа
+                const orderItems = cart.items.map(item => ({
+                    product_id: item.product_id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                }));
+                
+                const userId = document.getElementById('user-id').value;
+                const address = document.getElementById('address').value;
+                const paymentMethod = document.getElementById('payment-method').value;
+                
+                if (!userId || !address) {
+                    showStatus('Заполните все поля', 'error');
+                    return;
+                }
+                
+                const response = await fetch(`${ORDERS_URL}/orders/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: userId,
+                        items: orderItems,
+                        address: address,
+                        paymentMethod: paymentMethod
+                    })
+                });
+                
+                if (response.ok) {
+                    const order = await response.json();
+                    showStatus(`✅ Заказ №${order.id} создан! Статус: ${order.status}`, 'success');
+                    
+                    // Очищаем корзину после успешного заказа
+                    await clearCart();
+                    loadOrders();
+                } else {
+                    showStatus('Ошибка при создании заказа', 'error');
+                }
+            } catch (error) {
+                showStatus('Ошибка соединения с модулем заказов', 'error');
+                console.error(error);
+            }
+        }
+        
+        // ============ Модуль В: Загрузка заказов ============
+        async function loadOrders() {
+            try {
+                const userId = document.getElementById('user-id').value;
+                const response = await fetch(`${ORDERS_URL}/orders?userId=${userId}`);
+                const orders = await response.json();
+                
+                const container = document.getElementById('orders-list');
+                if (!orders || orders.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:#999;">Нет заказов</p>';
+                    return;
+                }
+                
+                container.innerHTML = orders.map(order => `
+                    <div class="order-item">
+                        <div><strong>Заказ №${order.id}</strong></div>
+                        <div>Дата: ${new Date(order.createdAt).toLocaleString()}</div>
+                        <div>Адрес: ${order.address}</div>
+                        <div>Сумма: ${order.totalAmount} ₽</div>
+                        <div>
+                            Статус: 
+                            <span class="order-status status-${getStatusClass(order.status)}">
+                                ${getStatusText(order.status)}
+                            </span>
+                        </div>
+                        ${order.courierId ? `<div>Курьер ID: ${order.courierId}</div>` : ''}
+                        ${order.eta ? `<div>⏱ Доставка через: ${order.eta} мин</div>` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('orders-list').innerHTML = 
+                    '<p style="color:red">❌ Ошибка загрузки заказов</p>';
+                console.error(error);
+            }
+        }
+        
+        function getStatusClass(status) {
+            switch(status) {
+                case 'PENDING': return 'pending';
+                case 'COURIER_ASSIGNED': return 'assigned';
+                case 'DELIVERED': return 'delivered';
+                default: return 'pending';
+            }
+        }
+        
+        function getStatusText(status) {
+            switch(status) {
+                case 'PENDING': return '⏳ Ожидание курьера';
+                case 'COURIER_ASSIGNED': return '🚚 Курьер назначен';
+                case 'PICKED_UP': return '🍕 Курьер забрал заказ';
+                case 'DELIVERED': return '✅ Доставлен';
+                case 'CANCELLED': return '❌ Отменён';
+                default: return status;
+            }
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.position = 'fixed';
+            statusDiv.style.bottom = '20px';
+            statusDiv.style.right = '20px';
+            statusDiv.style.zIndex = '1000';
+            document.body.appendChild(statusDiv);
+            
+            setTimeout(() => statusDiv.remove(), 3000);
+        }
+        
+        // Автоматическая загрузка при открытии страницы
+        loadProducts();
+        refreshCart();
+        loadOrders();
+        
+        // Обновление заказов при смене пользователя
+        document.getElementById('user-id').addEventListener('change', loadOrders);
+    </script>
+</body>
+</html>

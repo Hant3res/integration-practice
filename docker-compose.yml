@@ -1,0 +1,44 @@
+services:
+  catalog:
+    build:
+      context: .
+      dockerfile: Dockerfile.catalog
+    container_name: catalog-service
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cart:
+    build:
+      context: .
+      dockerfile: Dockerfile.cart
+    container_name: cart-service
+    ports:
+      - "5002:5002"
+    depends_on:
+      - catalog
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  orders:
+    build:
+      context: .
+      dockerfile: Dockerfile.orders
+    container_name: orders-service
+    ports:
+      - "3000:3000"
+    depends_on:
+      - catalog
+      - cart
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
