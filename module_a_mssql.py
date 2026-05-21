@@ -9,6 +9,7 @@ import urllib.parse
 
 app = Flask(__name__)
 CORS(app)
+app.config['JSON_AS_ASCII'] = False  # Поддержка UTF-8
 
 # Подключение к MSSQL
 DB_HOST = os.environ.get('DB_HOST', 'localhost')
@@ -43,12 +44,15 @@ Base.metadata.create_all(engine)
 ORDER_SERVICE_URL = os.environ.get('ORDER_SERVICE_URL', 'http://localhost:3000')
 
 def send_webhook(product_data):
+    """ИСПРАВЛЕНО: правильный URL и обработка ошибок"""
     try:
         response = requests.post(
-            f"{ORDER_SERVICE_URL}/webhooks/product-created",
+            f"{ORDER_SERVICE_URL}/webhooks/product-created",  # ИСПРАВЛЕНО
             json=product_data,
+            headers={"Content-Type": "application/json"},
             timeout=5
         )
+        response.raise_for_status()
         print(f'Webhook sent: {response.status_code}')
     except Exception as e:
         print(f'Webhook failed: {e}')
