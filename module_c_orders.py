@@ -17,22 +17,27 @@ def get_orders():
         return jsonify(user_orders)
     return jsonify(orders)
 
+@app.route('/orders/<int:order_id>', methods=['GET'])
+def get_order(order_id):
+    """Получить заказ по ID (ДОБАВЛЕНО)"""
+    order = next((o for o in orders if o['id'] == order_id), None)
+    if order:
+        return jsonify(order)
+    return jsonify({"error": "Order not found"}), 404
+
 @app.route('/orders/create', methods=['POST'])
 def create_order():
     global order_id_counter
     data = request.json
     
-    if not data.get('userId') or not data.get('items') or not data.get('address'):
-        return jsonify({"error": "Missing required fields"}), 400
-    
     new_order = {
         "id": order_id_counter,
-        "userId": data['userId'],
-        "items": data['items'],
-        "address": data['address'],
+        "userId": data.get('userId'),
+        "items": data.get('items'),
+        "address": data.get('address'),
         "paymentMethod": data.get('paymentMethod', 'CASH'),
         "status": "PENDING",
-        "totalAmount": sum(i['price'] * i['quantity'] for i in data['items']),
+        "totalAmount": sum(i['price'] * i['quantity'] for i in data.get('items', [])),
         "createdAt": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         "courierId": None,
         "eta": None
@@ -40,7 +45,7 @@ def create_order():
     order_id_counter += 1
     orders.append(new_order)
     
-    # Симуляция поиска курьера (фоном)
+    # Симуляция назначения курьера
     def assign_courier(order_id):
         time.sleep(2)
         for o in orders:
@@ -54,18 +59,9 @@ def create_order():
     
     return jsonify(new_order), 201
 
-@app.route('/orders/<int:order_id>/status', methods=['GET'])
-def get_status(order_id):
-    order = next((o for o in orders if o['id'] == order_id), None)
-    if not order:
-        return jsonify({"error": "Order not found"}), 404
-    return jsonify({
-        "orderId": order['id'],
-        "status": order['status'],
-        "courierId": order['courierId'],
-        "eta": order['eta']
-    })
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok", "module": "orders"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=True)
-EOF
